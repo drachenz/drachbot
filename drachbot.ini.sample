@@ -3,6 +3,7 @@ nick: mydrachbot
 logfile: ~/drachbot.log
 admin: myNick
 server: irc.efnet.net
+port: 6667
 google_api: <my google api key>
 news_api: <my news api key>
 wunderground_api: <my weather underground api key>

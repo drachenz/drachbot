@@ -16,6 +16,7 @@ config.read(confname)
 
 # get config settings from config file
 server = config.get('bot', 'server')
+server_port = int(config.get('bot', 'port'))
 botnick = config.get('bot', 'nick')
 adminname = config.get('bot', 'admin')
 logfile = config.get('bot', 'logfile')
@@ -28,7 +29,7 @@ ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 my_channels = []
 
 def connect():
-    ircsock.connect((server, 6667))
+    ircsock.connect((server, server_port))
     time.sleep(1)
     ircsock.send(bytes("USER " + botnick + " 8 * :"+botnick+"\r\n", "UTF-8"))
     time.sleep(1)
@@ -187,7 +188,7 @@ def get_weather(location):
         else:
             # get first match's api url
             apiurl = querydata['RESULTS'][0]['l']
-            r = requests.get('http://api.wunderground.com/api/'+wunderground_API+'/conditions/'+apiurl+'.json')
+            r = requests.get('http://api.wunderground.com/api/'+wunderground_API+'/conditions/forecast/alerts/'+apiurl+'.json')
             jsondata = r.json()
             locationname = jsondata['current_observation']['display_location']['full']
             locationcountry = jsondata['current_observation']['display_location']['country']
@@ -197,12 +198,33 @@ def get_weather(location):
             wind = jsondata['current_observation']['wind_string']
             humidity = jsondata['current_observation']['relative_humidity']
             feelslike = jsondata['current_observation']['feelslike_string']
+
+            # forecast info
+
+            # if forecast country is US display non-metric string, otherwise go metric!
+
+
+            todayfcst_day = jsondata['forecast']['txt_forecast']['forecastday'][0]['title']
+            if jsondata['current_observation']['display_location']['country'] != "US":
+                todayfcst_txt = jsondata['forecast']['txt_forecast']['forecastday'][0]['fcttext_metric']
+            else:
+                todayfcst_txt = jsondata['forecast']['txt_forecast']['forecastday'][0]['fcttext']
+
+            # alerts
+
+            if len(jsondata['alerts']) > 0:
+                alertdesc = jsondata['alerts'][0]['description']
+                alertexp = jsondata['alerts'][0]['expires']
+                alerttxt = "ALERT: " + alertdesc + " until " + alertexp
+            else:
+                alerttxt = ""
+
             retstr = locationname+", "+locationcountry+" Conditions: "+conditions+" "+tempstr \
                 +". Relative humidity: "+humidity + ". Wind: "+ wind + ". Feels like: " + feelslike \
-                + ". " + obstime
+                + ". " + obstime + " - " + todayfcst_day + ": " + todayfcst_txt + " " + alerttxt
 
             if len(querydata['RESULTS']) > 1:
-                return retstr + ". (multiple matches found, picked first result)"
+                return retstr + " (multiple matches found, picked first result)"
             else:
                return retstr
 
