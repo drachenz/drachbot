@@ -310,7 +310,11 @@ def get_tvshow(showname):
     return retval
 
 def handle_kickevent(txt):
-    (fullhostname, cmd, channel, nick, reason) = txt.split(maxsplit=5)
+    try:
+        (fullhostname, cmd, channel, nick, reason) = txt.split(maxsplit=5)
+    except ValueError:
+        # i guess no kick reason
+        (fullhostname, cmd, channel, nick) = txt.split(maxsplit=5)
     if nick == botnick:
        # we were kicked
        if channel in my_channels:
@@ -319,7 +323,11 @@ def handle_kickevent(txt):
           logmsg("ODD! kicked from a channel ("+channel+") i didn't even know I was in!\n")
 
 def handle_partevent(txt):
-    (fullhostname, cmd, channel) = txt.split(maxsplit=3)
+    try:
+        (fullhostname, cmd, channel, reason) = txt.split(maxsplit=3)
+    except ValueError:
+        # probably no reason given
+        (fullhostname, cmd, channel) = txt.split(maxsplit=3)
     if fullhostname[0] == ":":
         delim = fullhostname.find("!")
         nick = fullhostname[1:delim]
