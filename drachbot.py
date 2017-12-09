@@ -117,66 +117,69 @@ def sendaction(dest, txt):
 
 def handle_privmsg(txt):
     # determine if someone msg'd us
-    if txt.split()[2] == botnick:
-        # msg to us
-        fullhost = txt.split()[0]
-        if fullhost[0] == ":":
-            delim = fullhost.find("!")
-            nick = fullhost[1:delim]
-            identhost = fullhost[delim+1:]
-            (ident, hostname) = identhost.split("@")
-        else:
-            delim = fullhost.find("!")
-            nick = fullhost[0:delim]
-            identhost = fullhost[delim+1:]
-            (ident, hostname) = identhost.split("@")
-
-        
-        msgcontent = (txt.split())[3:]
-        restofmsg = " ".join(msgcontent)[1:]
-
-        #print("Received PRIVMSG to us from " + nick + " ident " + ident + " hostname "+hostname +" saying: "+restofmsg)
-
-        if restofmsg == ".quit" and nick == adminname:
-        #    print("boss said to quit!")
-            send_quit("woot")
-        if restofmsg.find(".join #") != -1 and nick == adminname:
-            msgparts = restofmsg.split()
-            if msgparts[0] == ".join" and msgparts[1][0] == "#":
-                if msgparts[1] in my_channels:
-                    send_privmsg(nick, "Already in channel "+msgparts[1])
-                else:
-                    joinchan(msgparts[1])
-        if restofmsg.find(".part #") != -1 and nick == adminname:
-            msgparts = restofmsg.split()
-            if msgparts[0] == ".part" and msgparts[1][0] == "#":
-                if msgparts[1] in my_channels:
-                    partchan(msgparts[1])
-                else:
-                    send_privmsg(nick, "Not in channel "+msgparts[1])
-        if restofmsg.split()[0] == ".me":
-            if restofmsg.split()[1][0] != "#":
-                send_privmsg(nick, "format: .me #channel txt")
+    try:
+        if txt.split()[2] == botnick:
+            # msg to us
+            fullhost = txt.split()[0]
+            if fullhost[0] == ":":
+                delim = fullhost.find("!")
+                nick = fullhost[1:delim]
+                identhost = fullhost[delim+1:]
+                (ident, hostname) = identhost.split("@")
             else:
-                sendaction(restofmsg.split()[1], " ".join(restofmsg.split()[2:]))
-    else:
-        # msg send to channel. check if it's a command (starts with !)
-        msgcontent = (txt.split())[3:]
-        restofmsg = " ".join(msgcontent)[1:]
-        if restofmsg[0] == "!":
-            # bot command rcvd
-            if restofmsg.split()[0][1:].lower() == "fortune":
-                cmdout = subprocess.getoutput("fortune -s -o")
-                fmtcmd = " ".join(cmdout.split("\n"))
-                fmtcmd = fmtcmd.replace("\t", "")
-                send_privmsg(txt.split()[2], fmtcmd)
-            if restofmsg.split()[0][1:].lower() == "news":
-                send_privmsg(txt.split()[2], get_news())
-            if restofmsg.split()[0][1:].lower() == "tv":
-                send_privmsg(txt.split()[2], get_tvshow(" ".join(restofmsg.split()[1:])))
-            if restofmsg.split()[0][1:].lower() == "w":
-                send_privmsg(txt.split()[2], get_weather(" ".join(restofmsg.split()[1:])))
-
+                delim = fullhost.find("!")
+                nick = fullhost[0:delim]
+                identhost = fullhost[delim+1:]
+                (ident, hostname) = identhost.split("@")
+    
+            
+            msgcontent = (txt.split())[3:]
+            restofmsg = " ".join(msgcontent)[1:]
+    
+            #print("Received PRIVMSG to us from " + nick + " ident " + ident + " hostname "+hostname +" saying: "+restofmsg)
+    
+            if restofmsg == ".quit" and nick == adminname:
+            #    print("boss said to quit!")
+                send_quit("woot")
+            if restofmsg.find(".join #") != -1 and nick == adminname:
+                msgparts = restofmsg.split()
+                if msgparts[0] == ".join" and msgparts[1][0] == "#":
+                    if msgparts[1] in my_channels:
+                        send_privmsg(nick, "Already in channel "+msgparts[1])
+                    else:
+                        joinchan(msgparts[1])
+            if restofmsg.find(".part #") != -1 and nick == adminname:
+                msgparts = restofmsg.split()
+                if msgparts[0] == ".part" and msgparts[1][0] == "#":
+                    if msgparts[1] in my_channels:
+                        partchan(msgparts[1])
+                    else:
+                        send_privmsg(nick, "Not in channel "+msgparts[1])
+            if restofmsg.split()[0] == ".me":
+                if restofmsg.split()[1][0] != "#":
+                    send_privmsg(nick, "format: .me #channel txt")
+                else:
+                    sendaction(restofmsg.split()[1], " ".join(restofmsg.split()[2:]))
+        else:
+            # msg send to channel. check if it's a command (starts with !)
+            msgcontent = (txt.split())[3:]
+            restofmsg = " ".join(msgcontent)[1:]
+            if restofmsg[0] == "!":
+                # bot command rcvd
+                if restofmsg.split()[0][1:].lower() == "fortune":
+                    cmdout = subprocess.getoutput("fortune -s -o")
+                    fmtcmd = " ".join(cmdout.split("\n"))
+                    fmtcmd = fmtcmd.replace("\t", "")
+                    send_privmsg(txt.split()[2], fmtcmd)
+                if restofmsg.split()[0][1:].lower() == "news":
+                    send_privmsg(txt.split()[2], get_news())
+                if restofmsg.split()[0][1:].lower() == "tv":
+                    send_privmsg(txt.split()[2], get_tvshow(" ".join(restofmsg.split()[1:])))
+                if restofmsg.split()[0][1:].lower() == "w":
+                    send_privmsg(txt.split()[2], get_weather(" ".join(restofmsg.split()[1:])))
+    except IndexError:
+        logmsg("IndexError caught")
+ 
 def get_weather(location):
     # use autocomplete api
     try:
@@ -227,19 +230,11 @@ def get_weather(location):
                 return retstr + " (multiple matches found, picked first result)"
             else:
                return retstr
-
-#        return "Found " + str(len(querydata['RESULTS'])) + " potential matches"
-
-#        r = requests.get('http://api.wunderground.com/api/'+wunderground_API+"/conditions/q/"+location)
-#        jsondata = r.json()
-
-#        locationname = jsondata['current_observation']['display_location']['full']
-#        current_sky = jsondata['current_observation']['weather']
-#        current_temp = jsondata['current_observation']['temperature_string']
-
-#        return locationname + ": " + current_sky + " " + current_temp        
+     
     except ValueError:
         return "Can't find location"
+    except KeyError:
+        return "Can't find details for that location, try another location"
 
 def get_news():
     r = requests.get('https://newsapi.org/v1/articles?source=associated-press&sortBy=top&apiKey='+news_API)
@@ -315,7 +310,7 @@ def get_tvshow(showname):
     return retval
 
 def handle_kickevent(txt):
-    (fullhostname, cmd, channel, nick, reason) = txt.split()
+    (fullhostname, cmd, channel, nick, reason) = txt.split(maxsplit=5)
     if nick == botnick:
        # we were kicked
        if channel in my_channels:
@@ -324,7 +319,7 @@ def handle_kickevent(txt):
           logmsg("ODD! kicked from a channel ("+channel+") i didn't even know I was in!\n")
 
 def handle_partevent(txt):
-    (fullhostname, cmd, channel) = txt.split()
+    (fullhostname, cmd, channel) = txt.split(maxsplit=3)
     if fullhostname[0] == ":":
         delim = fullhostname.find("!")
         nick = fullhostname[1:delim]
