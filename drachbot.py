@@ -311,10 +311,10 @@ def get_tvshow(showname):
 
 def handle_kickevent(txt):
     try:
-        (fullhostname, cmd, channel, nick, reason) = txt.split(maxsplit=5)
+        (fullhostname, cmd, channel, nick, reason) = txt.split(maxsplit=4)
     except ValueError:
         # i guess no kick reason
-        (fullhostname, cmd, channel, nick) = txt.split(maxsplit=5)
+        (fullhostname, cmd, channel, nick) = txt.split(maxsplit=4)
     if nick == botnick:
        # we were kicked
        if channel in my_channels:
