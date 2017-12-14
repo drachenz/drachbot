@@ -1,6 +1,8 @@
 import configparser
 import server
 import channel
+import time
+import datetime
 
 # Bot class
 
@@ -26,10 +28,24 @@ class Bot:
             raise
 
     def Start(self):
-        self.ircserver = server.Server()
-        self.ircserver.Connect(self.server, self.server_port, self.botnick)
+        self.ircserver = server.Server(self)
+        self.ircserver.Connect(self.server, self.server_port)
+
+        while 1:
+            time.sleep(0.1)
+
+            for ircmsg in self.ircserver.GetLine():
+                self.Log(ircmsg)
 
     def Exit(self):
         pass
 
-
+    def Log(self, text):
+        try:
+            logf = open(self.logfile, 'at')
+            curtime = datetime.datetime.now().strftime("%m/%d/%Y %H:%M")
+            logf.write(curtime + " " + text)
+            logf.close
+        except:
+            print ("Some error occurred in Bot.Log")
+            raise
