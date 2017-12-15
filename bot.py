@@ -1,6 +1,7 @@
 import configparser
 import server
 import channel
+import message
 import time
 import datetime
 
@@ -36,6 +37,7 @@ class Bot:
 
             for ircmsg in self.ircserver.GetLine():
                 self.Log(ircmsg)
+                self.process_input(ircmsg)
 
     def Exit(self):
         pass
@@ -49,3 +51,29 @@ class Bot:
         except:
             print ("Some error occurred in Bot.Log")
             raise
+
+    def process_input(self, text):
+        # here's where things start getting complicated
+        if text.startswith("PING"):
+            self.ircserver.SendLine("PONG " + text.split()[1])
+            return
+
+        try:
+            command_part = text.split()[1]
+
+            if command_part == "PRIVMSG":
+                input_to_process = message.Message(text)
+            elif command_part == "JOIN":
+                input_to_process = message.Message(text)
+            elif command_part == "KICK":
+                input_to_process = message.Message(text)
+            else:
+                return
+                
+
+            # do stuff ...
+
+        except:
+            raise
+
+

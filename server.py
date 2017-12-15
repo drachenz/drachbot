@@ -32,7 +32,7 @@ class Server:
     def SendLine(self, text):
         try:
             self.ircsock.send(bytes(text+"\r\n", "UTF-8"))
-            self.bot.Log(text)
+            self.bot.Log(">"+text+"\r\n")
         except:
             print("Some error occurred in Server.SendLine")
             raise
