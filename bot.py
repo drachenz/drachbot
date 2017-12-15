@@ -23,6 +23,8 @@ class Bot:
             self.google_API = config.get('bot', 'google_api')
             self.news_API = config.get('bot', 'news_api')
             self.wunderground_API = config.get('bot', 'wunderground_api')
+            self.use_ipv6 = config.getboolean('bot', 'use_ipv6')
+            self.use_ssl = config.getboolean('bot', 'use_ssl')
         except configparser.Error:
             # add more specific exceptions later
             print ("some error occurred with the config file")
@@ -61,7 +63,16 @@ class Bot:
         try:
             command_part = text.split()[1]
 
-            if command_part == "PRIVMSG":
+            # check key server errors first
+            if command_part == "433":
+                # NICK in use error, try to modify
+                self.botnick = self.botnick+"_"
+                self.ircserver.SendLine("NICK " + self.botnick)
+            elif command_part == "432":
+                # erroneous NICK... give up and let the user reconfig
+                print ("Server reported we are giving it an invalid NICK... please reconfigure")
+                exit(1)
+            elif command_part == "PRIVMSG":
                 input_to_process = message.Message(text)
             elif command_part == "JOIN":
                 input_to_process = message.Message(text)

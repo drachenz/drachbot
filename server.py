@@ -2,6 +2,7 @@ import socket
 import sys
 import time
 import bot
+import ssl
 
 # Server class
 
@@ -12,7 +13,14 @@ class Server:
     
     def Connect(self, server, server_port):
         try:
-            self.ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            if self.bot.use_ipv6:
+                self.ircsock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            else:
+                self.ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            if self.bot.use_ssl:
+                self.ircsock = ssl.wrap_socket(self.ircsock)
+
             self.ircsock.connect((server, server_port))
             botnick = self.bot.botnick
             time.sleep(1)
@@ -21,8 +29,7 @@ class Server:
             self.SendLine("NICK " + botnick)
             time.sleep(1)
 
-        except:
-            print("Some error occurred")
+        except Exception:
             raise
 
 
