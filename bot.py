@@ -73,10 +73,25 @@ class Bot:
                 print ("Server reported we are giving it an invalid NICK... please reconfigure")
                 exit(1)
             elif command_part == "PRIVMSG":
-                input_to_process = message.Message(text)
+                privmsg = message.Message(text)
+
+                if privmsg.is_ctcp:
+                    self.handle_ctcp(privmsg)
+                    return
+
+                if privmsg.destination == self.botnick:
+                    # PRIVMSG to us 
+                    self.SendPrivmsg(privmsg.nick, "hi !!")
+                else:
+                    # PRIVMSG to channel
+                    self.SendPrivmsg(privmsg.destination, "yo yo yo!")
+
+
             elif command_part == "JOIN":
                 input_to_process = message.Message(text)
             elif command_part == "KICK":
+                input_to_process = message.Message(text)
+            elif command_part == "NOTICE":
                 input_to_process = message.Message(text)
             else:
                 return
@@ -87,4 +102,21 @@ class Bot:
         except:
             raise
 
+    def handle_ctcp(self, msg):
+        if msg.message.startswith("VERSION"):
+            self.SendCTCPReply(msg.nick, "VERSION "+ self.myversion)
 
+    def is_channel(self, name):
+        if name.startswith("#") or name.startswith("&"):
+            return True
+        else:
+            return False
+    
+    def SendPrivmsg(self, dest, text):
+        self.ircserver.SendLine("PRIVMSG " + dest + " :" + text)
+
+    def SendNotice(self, dest, text):
+        self.ircserver.SendLine("NOTICE " + dest + " :" + text)
+
+    def SendCTCPReply(self, dest, text):
+        self.SendNotice(dest, "\001"+text+"\001")
