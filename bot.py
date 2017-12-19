@@ -9,6 +9,8 @@ import datetime
 
 class Bot:
 
+    myversion = "drachbot 0.2-BETA"
+
     def __init__(self,config_file):
         # read the conf file
         try:
@@ -34,6 +36,13 @@ class Bot:
         self.ircserver = server.Server(self)
         self.ircserver.Connect(self.server, self.server_port)
 
+
+        #testing
+        time.sleep(1)
+        self.ircserver.SendLine("JOIN #test")
+        self.ircserver.SendLine("JOIN #drachbot")
+        self.ircserver.SendLine("JOIN #frufru")
+
         while 1:
             time.sleep(0.1)
 
@@ -47,7 +56,7 @@ class Bot:
     def Log(self, text):
         try:
             logf = open(self.logfile, 'at')
-            curtime = datetime.datetime.now().strftime("%m/%d/%Y %H:%M")
+            curtime = datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S")
             logf.write(curtime + " " + text)
             logf.close
         except:
@@ -72,6 +81,22 @@ class Bot:
                 # erroneous NICK... give up and let the user reconfig
                 print ("Server reported we are giving it an invalid NICK... please reconfigure")
                 exit(1)
+            elif command_part == "471":
+                # cannot join channel (full)
+                print ("Can't join channel "+text.split()[3]+ ": Channel is full (+l)")
+                return
+            elif command_part == "473":
+                # cannot join channel (invite only)
+                print ("Can't join channel "+text.split()[3]+ ": Must be invited (+i)")
+                return
+            elif command_part == "474":
+                # cannot join channel (banned)
+                print ("Can't join channel "+text.split()[3]+ ": Banned (+b)")
+                return
+            elif command_part == "475":
+                # cannot join channel (bad key)
+                print ("Can't join channel "+text.split()[3]+ ": Bad key (+k)")
+                return
             elif command_part == "PRIVMSG":
                 privmsg = message.Message(text)
 
@@ -81,16 +106,32 @@ class Bot:
 
                 if privmsg.destination == self.botnick:
                     # PRIVMSG to us 
-                    self.SendPrivmsg(privmsg.nick, "hi !!")
+                    self.handleBotPM(privmsg)
                 else:
                     # PRIVMSG to channel
-                    self.SendPrivmsg(privmsg.destination, "yo yo yo!")
+                    self.handleChannelPM(privmsg)
 
 
             elif command_part == "JOIN":
-                input_to_process = message.Message(text)
+                irc_result = message.Message(text)
+                if irc_result.nick == self.botnick:
+                    print ("I joined "+ text.split()[2])
+                else:
+                    print (irc_result.nick + " joined " + text.split()[2])
             elif command_part == "KICK":
-                input_to_process = message.Message(text)
+                irc_result = message.Message(text)
+                if irc_result.nick == self.botnick:
+                    print ("I kicked "+text.split()[3]+" from "+irc_result.destination)
+                elif text.split()[3] == self.botnick:
+                    print ("I was kicked from "+irc_result.destination+" by "+irc_result.nick)
+                else:
+                    print (text.split()[3]+" was kicked from "+irc_result.destination+" by "+irc_result.nick)
+            elif command_part == "PART":
+                irc_result = message.Message(text)
+                if irc_result.nick == self.botnick:
+                    print ("I left "+irc_result.destination)
+                else:
+                    print (irc_result.nick+" left "+irc_result.destination)
             elif command_part == "NOTICE":
                 input_to_process = message.Message(text)
             else:
@@ -104,7 +145,7 @@ class Bot:
 
     def handle_ctcp(self, msg):
         if msg.message.startswith("VERSION"):
-            self.SendCTCPReply(msg.nick, "VERSION "+ self.myversion)
+            self.SendCTCPReply(msg.nick, "VERSION "+ Bot.myversion)
 
     def is_channel(self, name):
         if name.startswith("#") or name.startswith("&"):
@@ -120,3 +161,9 @@ class Bot:
 
     def SendCTCPReply(self, dest, text):
         self.SendNotice(dest, "\001"+text+"\001")
+
+    def handleChannelPM(self, privmsg):
+        self.SendPrivmsg(privmsg.destination, privmsg.nick + ": hi!")
+
+    def handleBotPM(self, privmsg):
+        self.SendPrivmsg(privmsg.nick, "how's it going, " + privmsg.nick + "?")
