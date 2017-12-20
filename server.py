@@ -11,7 +11,7 @@ class Server:
     def __init__(self, botinst):
         self.bot = botinst
     
-    def Connect(self, server, server_port):
+    def Connect(self, server, server_port, local_host, local_port):
         try:
             if self.bot.use_ipv6:
                 self.ircsock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -20,6 +20,11 @@ class Server:
 
             if self.bot.use_ssl:
                 self.ircsock = ssl.wrap_socket(self.ircsock)
+
+            if local_host == "any":
+                self.ircsock.bind((socket.gethostname(), local_port))
+            else:
+                self.ircsock.bind((local_host, local_port))
 
             self.ircsock.connect((server, server_port))
             botnick = self.bot.botnick
@@ -34,7 +39,7 @@ class Server:
 
 
     def Disconnect(self):
-        pass
+        self.ircsock.close()
 
     def SendLine(self, text):
         try:

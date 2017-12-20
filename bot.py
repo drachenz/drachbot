@@ -28,6 +28,8 @@ class Bot:
             self.wunderground_API = config.get('bot', 'wunderground_api')
             self.use_ipv6 = config.getboolean('bot', 'use_ipv6')
             self.use_ssl = config.getboolean('bot', 'use_ssl')
+            self.bind_host = config.get('bot', 'bind_host')
+            self.bind_port = int(config.get('bot', 'bind_port'))
         except configparser.Error:
             # add more specific exceptions later
             print ("some error occurred with the config file")
@@ -35,14 +37,7 @@ class Bot:
 
     def Start(self):
         self.ircserver = server.Server(self)
-        self.ircserver.Connect(self.server, self.server_port)
-
-
-        #testing
-        time.sleep(1)
-        self.joinChannel("#test")
-        self.joinChannel("#drachbot")
-        self.joinChannel("frufru")
+        self.ircserver.Connect(self.server, self.server_port, self.bind_host, self.bind_port)
 
         while 1:
             time.sleep(0.1)
@@ -52,7 +47,9 @@ class Bot:
                 self.process_input(ircmsg)
 
     def Exit(self):
-        pass
+        self.ircserver.SendLine("QUIT")
+        self.ircserver.Disconnect()
+        exit(0) 
 
     def Log(self, text):
         try:
@@ -65,12 +62,6 @@ class Bot:
             raise
 
     def process_input(self, text):
-
-        print ("I'm in these channels:")
-        for chan in self.channels:
-            if chan.on:
-                print (chan.name)
-
 
         # here's where things start getting complicated
         if text.startswith("PING"):
@@ -91,21 +82,21 @@ class Bot:
                 exit(1)
             elif command_part == "471":
                 # cannot join channel (full)
-                self.leaveChannel(text.split()[3])
+                self.partChannel(text.split()[3])
                 print ("Can't join channel "+text.split()[3]+ ": Channel is full (+l)")
                 return
             elif command_part == "473":
                 # cannot join channel (invite only)
-                self.leaveChannel(text.split()[3])
+                self.partChannel(text.split()[3])
                 print ("Can't join channel "+text.split()[3]+ ": Must be invited (+i)")
                 return
             elif command_part == "474":
                 # cannot join channel (banned)
-                self.leaveChannel(text.split()[3])
+                self.partChannel(text.split()[3])
                 print ("Can't join channel "+text.split()[3]+ ": Banned (+b)")
                 return
             elif command_part == "475":
-                self.leaveChannel(text.split()[3])
+                self.partChannel(text.split()[3])
                 # cannot join channel (bad key)
                 print ("Can't join channel "+text.split()[3]+ ": Bad key (+k)")
                 return
@@ -125,7 +116,10 @@ class Bot:
 
 
             elif command_part == "JOIN":
-                chan_name = text.split()[2][1:]
+                # some ircds put ':' before channel some don't
+                chan_name = text.split()[2]
+                if chan_name[0] == ":":
+                    chan_name = chan_name[1:]
                 irc_result = message.Message(text)
                 if irc_result.nick == self.botnick:
                     for i, chan in enumerate(self.channels):
@@ -158,15 +152,19 @@ class Bot:
             else:
                 return
                 
-
-            # do stuff ...
-
-        except:
+        except IndexError:
+            print ("malformed message received from irc server... ignoring")
             raise
+        except Exception:
+            raise
+
 
     def handle_ctcp(self, msg):
         if msg.message.startswith("VERSION"):
             self.SendCTCPReply(msg.nick, "VERSION "+ Bot.myversion)
+        elif msg.message.startswith("PING "):
+            print (msg.message)
+            self.SendCTCPReply(msg.nick, msg.message)
 
     def is_channel(self, name):
         if name.startswith("#") or name.startswith("&"):
@@ -184,10 +182,45 @@ class Bot:
         self.SendNotice(dest, "\001"+text+"\001")
 
     def handleChannelPM(self, privmsg):
+        if privmsg.message == " ":
+            return
+
         self.SendPrivmsg(privmsg.destination, privmsg.nick + ": hi!")
 
     def handleBotPM(self, privmsg):
-        self.SendPrivmsg(privmsg.nick, "how's it going, " + privmsg.nick + "?")
+        # determine if our admin is msg'ing us
+        if privmsg.message == " ":
+            return
+        if privmsg.nick == self.adminname:
+            cmd = privmsg.message.split()[0]
+
+            if cmd.lower() == "join":
+                if len(privmsg.message.split()) == 2:
+                    chan = privmsg.message.split()[1]
+                    self.joinChannel(chan)
+                elif len(privmsg.message.split()) == 3:
+                    chan = privmsg.message.split()[1]
+                    key = privmsg.message.split()[2]
+                    self.joinChannel(chan, key)
+                else:
+                    self.SendPrivmsg(privmsg.nick, "usage: join #channel <key>")
+            elif cmd.lower() == "chanlist":
+                if (len(self.channels)) == 0:
+                    self.SendPrivmsg(privmsg.nick, "I am not in any channels")
+                else:
+                    replymsg = ""
+                    for i, chan in enumerate(self.channels):
+                        replymsg += chan.name + " "
+                    self.SendPrivmsg(privmsg.nick, replymsg)
+            elif cmd.lower() == "part":
+                if len(privmsg.message.split()) >= 2:
+                    chan = privmsg.message.split()[1]
+                    self.partChannel(chan)
+                else:
+                    self.SendPrivmsg(privmsg.nick, "usage: part #channel")
+            elif cmd.lower() == "quit":
+                self.Exit()
+
 
     def joinChannel(self, name, key=False):
         for chan in self.channels:
@@ -202,7 +235,7 @@ class Bot:
             self.ircserver.SendLine("JOIN "+ name)
             self.channels.append(channel.Channel(name))
 
-    def leaveChannel(self, name):
+    def partChannel(self, name):
         for i, chan in enumerate(self.channels):
             if chan.name == name and chan.on == True:
                 self.ircserver.SendLine("PART "+ name)
