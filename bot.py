@@ -185,8 +185,6 @@ class Bot:
         if privmsg.message == " ":
             return
 
-        self.SendPrivmsg(privmsg.destination, privmsg.nick + ": hi!")
-
     def handleBotPM(self, privmsg):
         # determine if our admin is msg'ing us
         if privmsg.message == " ":
