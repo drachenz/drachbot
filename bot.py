@@ -12,6 +12,7 @@ class Bot:
     myversion = "drachbot 0.2-BETA"
 
     def __init__(self,config_file):
+        self.channels = []
         # read the conf file
         try:
             config = configparser.ConfigParser()
@@ -39,9 +40,9 @@ class Bot:
 
         #testing
         time.sleep(1)
-        self.ircserver.SendLine("JOIN #test")
-        self.ircserver.SendLine("JOIN #drachbot")
-        self.ircserver.SendLine("JOIN #frufru")
+        self.joinChannel("#test")
+        self.joinChannel("#drachbot")
+        self.joinChannel("frufru")
 
         while 1:
             time.sleep(0.1)
@@ -64,6 +65,13 @@ class Bot:
             raise
 
     def process_input(self, text):
+
+        print ("I'm in these channels:")
+        for chan in self.channels:
+            if chan.on:
+                print (chan.name)
+
+
         # here's where things start getting complicated
         if text.startswith("PING"):
             self.ircserver.SendLine("PONG " + text.split()[1])
@@ -83,17 +91,21 @@ class Bot:
                 exit(1)
             elif command_part == "471":
                 # cannot join channel (full)
+                self.leaveChannel(text.split()[3])
                 print ("Can't join channel "+text.split()[3]+ ": Channel is full (+l)")
                 return
             elif command_part == "473":
                 # cannot join channel (invite only)
+                self.leaveChannel(text.split()[3])
                 print ("Can't join channel "+text.split()[3]+ ": Must be invited (+i)")
                 return
             elif command_part == "474":
                 # cannot join channel (banned)
+                self.leaveChannel(text.split()[3])
                 print ("Can't join channel "+text.split()[3]+ ": Banned (+b)")
                 return
             elif command_part == "475":
+                self.leaveChannel(text.split()[3])
                 # cannot join channel (bad key)
                 print ("Can't join channel "+text.split()[3]+ ": Bad key (+k)")
                 return
@@ -113,9 +125,13 @@ class Bot:
 
 
             elif command_part == "JOIN":
+                chan_name = text.split()[2][1:]
                 irc_result = message.Message(text)
                 if irc_result.nick == self.botnick:
-                    print ("I joined "+ text.split()[2])
+                    for i, chan in enumerate(self.channels):
+                        if chan.name == chan_name:
+                            self.channels[i].on = True
+                    print ("I joined "+ chan_name)
                 else:
                     print (irc_result.nick + " joined " + text.split()[2])
             elif command_part == "KICK":
@@ -123,12 +139,17 @@ class Bot:
                 if irc_result.nick == self.botnick:
                     print ("I kicked "+text.split()[3]+" from "+irc_result.destination)
                 elif text.split()[3] == self.botnick:
+                    for i, chan in enumerate(self.channels):
+                        if chan.name == irc_result.destination:
+                            self.channels[i].on = False
+                            self.leaveChannel(chan.name)
                     print ("I was kicked from "+irc_result.destination+" by "+irc_result.nick)
                 else:
                     print (text.split()[3]+" was kicked from "+irc_result.destination+" by "+irc_result.nick)
             elif command_part == "PART":
                 irc_result = message.Message(text)
                 if irc_result.nick == self.botnick:
+                    self.leaveChannel(irc_result.destination)
                     print ("I left "+irc_result.destination)
                 else:
                     print (irc_result.nick+" left "+irc_result.destination)
@@ -167,3 +188,27 @@ class Bot:
 
     def handleBotPM(self, privmsg):
         self.SendPrivmsg(privmsg.nick, "how's it going, " + privmsg.nick + "?")
+
+    def joinChannel(self, name, key=False):
+        for chan in self.channels:
+            if chan.name == name and chan.on == True:
+                print ("already on channel: "+name)
+                return
+
+        if key:
+            self.ircserver.SendLine("JOIN "+ name + " " + key)
+            self.channels.append(channel.Channel(name, key))
+        else:
+            self.ircserver.SendLine("JOIN "+ name)
+            self.channels.append(channel.Channel(name))
+
+    def leaveChannel(self, name):
+        for i, chan in enumerate(self.channels):
+            if chan.name == name and chan.on == True:
+                self.ircserver.SendLine("PART "+ name)
+                self.channels[i].on = False
+            elif chan.name == name and chan.on == False:
+                self.channels.remove(chan) 
+
+
+
