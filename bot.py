@@ -39,6 +39,13 @@ class Bot:
         self.ircserver = server.Server(self)
         self.ircserver.Connect(self.server, self.server_port, self.bind_host, self.bind_port)
 
+        # rejoin channels we were in if we got disconnected
+        for i, chan in enumerate(self.channels):
+            if chan.on:
+                self.channels[i].on = False
+                self.joinChannel(chan.name, chan.key)
+
+
         while 1:
             time.sleep(0.1)
 
