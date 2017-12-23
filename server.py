@@ -52,14 +52,14 @@ class Server:
 
     def GetLine(self):
         try:
-            mybuffer = self.ircsock.recv(4096).decode("UTF-8")
+            mybuffer = self.ircsock.recv(4096).decode("UTF-8", "ignore")
             buffering = True
             while buffering:
                 if "\r\n" in mybuffer:
                     (line, mybuffer) = mybuffer.split("\r\n", 1)
                     yield line + "\n"
                 else:
-                    more = self.ircsock.recv(4096).decode("UTF-8")
+                    more = self.ircsock.recv(4096).decode("UTF-8", "ignore")
                     if not more:
                         buffering = False
                     else:
