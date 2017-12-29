@@ -143,14 +143,14 @@ class Bot:
                     for i, chan in enumerate(self.channels):
                         if chan.name == irc_result.destination:
                             self.channels[i].on = False
-                            self.leaveChannel(chan.name)
+                            self.partChannel(chan.name)
                     print ("I was kicked from "+irc_result.destination+" by "+irc_result.nick)
                 else:
                     print (text.split()[3]+" was kicked from "+irc_result.destination+" by "+irc_result.nick)
             elif command_part == "PART":
                 irc_result = message.Message(text)
                 if irc_result.nick == self.botnick:
-                    self.leaveChannel(irc_result.destination)
+                    self.partChannel(irc_result.destination)
                     print ("I left "+irc_result.destination)
                 else:
                     print (irc_result.nick+" left "+irc_result.destination)
@@ -225,7 +225,6 @@ class Bot:
                     self.SendPrivmsg(privmsg.nick, "usage: part #channel")
             elif cmd.lower() == "quit":
                 self.Exit()
-
 
     def joinChannel(self, name, key=False):
         for chan in self.channels:
